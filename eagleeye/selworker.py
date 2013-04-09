@@ -2,6 +2,7 @@ import base64
 import httplib
 import logging
 import os
+import socket
 
 import pyvirtualdisplay
 import selenium.common
@@ -12,7 +13,11 @@ from selenium import webdriver
 
 from eagleeye import RedisWorker
 
+
 logger = logging.getLogger(__name__)
+
+# Update
+socket.setdefaulttimeout(30)
 
 # Set up the webdriver options
 options = webdriver.ChromeOptions()
@@ -50,29 +55,26 @@ class SeleniumWorker(RedisWorker):
             self._driver = webdriver.Remote(
                 self.service.service_url,
                 desired_capabilities=options.to_capabilities())
-            self._driver.set_script_timeout(5)
-            self._driver.implicitly_wait(5)
-            self._driver.set_page_load_timeout(5)
+            self._driver.set_script_timeout(30)
+            self._driver.implicitly_wait(30)
+            self._driver.set_page_load_timeout(30)
         return self._driver
 
     def terminate_driver(self):
         """ Things go wrong with the webdriver; we want to recover robustly """
         logger.info('Terminating webdriver.')
-
         # Don't quit the driver here because it often hangs
         self._driver = None
-
-
         if self._service is not None:
+            proc = self._service.process
             try:
                 self._service.stop()
+                proc.kill()
                 # pgroup = os.getpgid(self._service.process.pid)
                 # os.killpg(pgroup, ) # XXX
-
             except Exception:
                 # This is really bad...
                 pass
-
         # throw away the old one no matter what
         self._service = None
 
@@ -91,9 +93,9 @@ class SeleniumWorker(RedisWorker):
             # try going to a blank page so we get an error now if we can't
             driver.get('about:blank')
         # No timelimiting currently :(
-        # except celery_exceptions.SoftTimeLimitExceeded:
-        #     logger.info('Terminating overtime process: %s', target_url)
-        #     self.terminate_driver()
+        except socket.timeout:
+             logger.info('Terminating overtime connection: %s', target_url)
+             self.terminate_driver()
         except (selenium.common.exceptions.WebDriverException,
                 httplib.BadStatusLine):
             # just kill it, alright?
@@ -118,6 +120,7 @@ class SeleniumWorker(RedisWorker):
     def __del__(self):
         self.terminate_driver()
         self.display.stop()
+
 
 class WriteScreenshot(RedisWorker):
     qinput = 'result:save_image'
