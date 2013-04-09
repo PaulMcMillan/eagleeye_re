@@ -4,6 +4,7 @@ import logging
 import os
 
 import pyvirtualdisplay
+import selenium.common
 import selenium.common.exceptions
 import selenium.webdriver.chrome.service as chrome_service
 
@@ -12,10 +13,6 @@ from selenium import webdriver
 from eagleeye import RedisWorker
 
 logger = logging.getLogger(__name__)
-
-# set up the xvfb display
-display = pyvirtualdisplay.Display(visible=0, size=(600, 600))
-display.start()
 
 # Set up the webdriver options
 options = webdriver.ChromeOptions()
@@ -33,6 +30,12 @@ class SeleniumWorker(RedisWorker):
 
     _driver = None
     _service = None
+
+    def __init__(self, *args, **kwargs):
+        super(SeleniumWorker, self).__init__(*args, **kwargs)
+        # set up the xvfb display
+        self.display = pyvirtualdisplay.Display(visible=0, size=(800, 800))
+        self.display.start()
 
     @property
     def service(self):
@@ -60,7 +63,7 @@ class SeleniumWorker(RedisWorker):
         if self._service is not None:
             try:
                 self._service.stop()
-                pgroup = os.getpgid(self._service.process.pid)
+                # pgroup = os.getpgid(self._service.process.pid)
                 # os.killpg(pgroup, ) # XXX
 
             except Exception:
@@ -109,11 +112,14 @@ class SeleniumWorker(RedisWorker):
         except selenium.common.exceptions.NoAlertPresentException:
             pass
 
+    def __del__(self):
+        self.terminate_driver()
+        self.display.stop()
 
 class WriteScreenshot(RedisWorker):
     qinput = 'result:save_image'
 
-    def run(job):
+    def run(self, job):
         """ Separate task (and queue: write_screenshot) for writing the
         screenshots to disk, so it can be run wherever the results are
         desired.
@@ -124,3 +130,4 @@ class WriteScreenshot(RedisWorker):
         f = open(os.path.join(os.getcwd(), 'out/%s.png' % file_name), 'w')
         f.write(binary_screenshot)
         f.close()
+        return url
