@@ -3,6 +3,7 @@ from eagleeye import selworker
 def test_imager():
     worker = selworker.SeleniumWorker(blocking=False)
     worker.write('image:http', 'http://google.com:80')
+#    worker.write('image:http', 'http://localhost:8000')
     for r in worker():
         print r
 

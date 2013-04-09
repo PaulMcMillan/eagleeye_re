@@ -50,6 +50,9 @@ class SeleniumWorker(RedisWorker):
             self._driver = webdriver.Remote(
                 self.service.service_url,
                 desired_capabilities=options.to_capabilities())
+            self._driver.set_script_timeout(5)
+            self._driver.implicitly_wait(5)
+            self._driver.set_page_load_timeout(5)
         return self._driver
 
     def terminate_driver(self):
