@@ -16,18 +16,7 @@ from eagleeye import RedisWorker
 
 logger = logging.getLogger(__name__)
 
-# Update
-socket.setdefaulttimeout(30)
-
-# Set up the webdriver options
-options = webdriver.ChromeOptions()
-options.add_argument('--start-maximized')
-options.add_argument('--disable-java')
-options.add_argument('--incognito')
-options.add_argument('--use-mock-keychain')
-#options.add_argument('--kiosk')
-# http://peter.sh/experiments/chromium-command-line-switches/
-
+SOCKET_TIMEOUT = 30
 
 class SeleniumWorker(RedisWorker):
     qinput = 'image:http'
@@ -42,6 +31,19 @@ class SeleniumWorker(RedisWorker):
         self.display = pyvirtualdisplay.Display(visible=0, size=(800, 800))
         self.display.start()
 
+        # set socket timeout to kill hung chromedriver connections
+        self.original_socket_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(SOCKET_TIMEOUT)
+
+        # Set up the webdriver options
+        self.options = webdriver.ChromeOptions()
+        self.options.add_argument('--start-maximized')
+        self.options.add_argument('--disable-java')
+        self.options.add_argument('--incognito')
+        self.options.add_argument('--use-mock-keychain')
+        #options.add_argument('--kiosk')
+        # http://peter.sh/experiments/chromium-command-line-switches/
+
     @property
     def service(self):
         if self._service is None:
@@ -54,7 +56,11 @@ class SeleniumWorker(RedisWorker):
         if self._driver is None:
             self._driver = webdriver.Remote(
                 self.service.service_url,
-                desired_capabilities=options.to_capabilities())
+                desired_capabilities=self.options.to_capabilities())
+            # These timeout commands don't presently work with
+            # chromedriver. Leaving them in in case the chromedriver
+            # people suddenly fix this issue:
+            # https://code.google.com/p/chromedriver/issues/detail?id=9
             self._driver.set_script_timeout(30)
             self._driver.implicitly_wait(30)
             self._driver.set_page_load_timeout(30)
@@ -118,8 +124,10 @@ class SeleniumWorker(RedisWorker):
             pass
 
     def __del__(self):
+        socket.setdefaulttimeout(self.original_socket_timeout)
         self.terminate_driver()
         self.display.stop()
+
 
 
 class WriteScreenshot(RedisWorker):
