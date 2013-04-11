@@ -22,6 +22,9 @@ Task Flow
 Queues
 ------
 
+Search queues are high-level abstrations of search tasks
+ * search:shodan - (query, page) for a task. Each page individual search task.
+
 Verify queues take a string of the form "address:port". The
 protcol-specific queues will eventually perform some validation.
 
