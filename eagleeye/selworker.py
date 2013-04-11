@@ -27,9 +27,14 @@ class SeleniumWorker(RedisWorker):
 
     def __init__(self, *args, **kwargs):
         super(SeleniumWorker, self).__init__(*args, **kwargs)
+
         # set up the xvfb display
         self.display = pyvirtualdisplay.Display(visible=0, size=(800, 800))
         self.display.start()
+
+        # NOTE: This DOES change the socket timeout globally. There's
+        # not much we can do about that though, since we don't have
+        # access to the offending socket buried deeply in urllib2.
 
         # set socket timeout to kill hung chromedriver connections
         self.original_socket_timeout = socket.getdefaulttimeout()
@@ -84,6 +89,16 @@ class SeleniumWorker(RedisWorker):
         # throw away the old one no matter what
         self._service = None
 
+    def dismiss_alerts(self):
+        # handle any possible blocking alerts because selenium is stupid
+        alert = self.driver.switch_to_alert()
+        try:
+            alert.dismiss()
+            logger.info(
+                'Closed alert for %s: %s', self.driver.current_url, alert.text)
+        except selenium.common.exceptions.NoAlertPresentException:
+            pass
+
     def run(self, job):
         target_url = job
         logger.info('Loading %s', target_url)
@@ -113,21 +128,10 @@ class SeleniumWorker(RedisWorker):
         if screenshot:
             return [screenshot, target_url]
 
-    def dismiss_alerts(self):
-        # handle any possible blocking alerts because selenium is stupid
-        alert = self.driver.switch_to_alert()
-        try:
-            alert.dismiss()
-            logger.info(
-                'Closed alert for %s: %s', self.driver.current_url, alert.text)
-        except selenium.common.exceptions.NoAlertPresentException:
-            pass
-
     def __del__(self):
         socket.setdefaulttimeout(self.original_socket_timeout)
         self.terminate_driver()
         self.display.stop()
-
 
 
 class WriteScreenshot(RedisWorker):
