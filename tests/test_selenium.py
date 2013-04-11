@@ -1,19 +1,17 @@
-from eagleeye import selworker
+import socket
+from eagleeye import selchrome
 
 def test_imager():
-    worker = selworker.SeleniumWorker(blocking=False)
+    worker = selchrome.SeleniumWorker(socket_timeout=10, blocking=False)
     worker.write('image:http', 'http://google.com:80')
-    worker.write('image:http', 'http://localhost:8000')
+    worker.write('image:http', 'http://localhost:8981')
+    sock = socket.socket()
+    sock.bind(('localhost', 8981))
+    sock.listen(0)
     for r in worker():
         print type(r)
+    sock.close()
 
-    worker = selworker.WriteScreenshot(blocking=False)
+    worker = selchrome.WriteScreenshot(blocking=False)
     for r in worker():
         print type(r)
-
-# def test_writer():
-#     worker = selworker.WriteScreenshot(blocking=False)
-#     worker.write('result:save_image', ['somedata', 'test_url'])
-#     for r in worker():
-#         print r
-

@@ -25,7 +25,7 @@ class SeleniumWorker(RedisWorker):
     _driver = None
     _service = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, socket_timeout=SOCKET_TIMEOUT, *args, **kwargs):
         super(SeleniumWorker, self).__init__(*args, **kwargs)
 
         # set up the xvfb display
@@ -38,7 +38,7 @@ class SeleniumWorker(RedisWorker):
 
         # set socket timeout to kill hung chromedriver connections
         self.original_socket_timeout = socket.getdefaulttimeout()
-        socket.setdefaulttimeout(SOCKET_TIMEOUT)
+        socket.setdefaulttimeout(socket_timeout)
 
         # Set up the webdriver options
         self.options = webdriver.ChromeOptions()
