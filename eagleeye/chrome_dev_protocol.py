@@ -1,3 +1,5 @@
+# unfinished and not working at present. Probably lower overhead than
+# chromedriver though, if it is made to work.
 import base64
 
 import json

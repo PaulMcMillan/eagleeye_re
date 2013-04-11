@@ -142,6 +142,8 @@ class WriteScreenshot(RedisWorker):
         screenshots to disk, so it can be run wherever the results are
         desired.
         """
+        # This code could be much cleaner. It was copied wholesale
+        # from the old project.
         screenshot, url = job
         binary_screenshot = base64.b64decode(screenshot)
         file_name = url.replace('://', '_').replace(':', '_')
