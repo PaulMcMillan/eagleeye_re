@@ -72,7 +72,7 @@ class RedisWorker(BaseWorker):
         """
         while True:
             result = self.read(blocking=self.blocking)
-            if result is None:  # our non-blocking read found no result
+            if result is None:  # our (non-blocking) read found no result
                 return  # so finish this generator
             yield result
 
