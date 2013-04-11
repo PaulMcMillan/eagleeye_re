@@ -48,20 +48,19 @@ class RedisWorker(BaseWorker):
     def read(self, queue=None, timeout=0, blocking=True):
         if not queue:
             queue = self.qinput
-
         if blocking:
             res = self.redis.brpop(queue, timeout)
-            if res:
+            if res:  # returns a (queue, val)
                 res = res[1]
         else:
             res = self.redis.rpop(queue)
-
         if res:
             return self.deserialize(res)
 
     def write(self, queue, *values):
-        values = iterit(values, cast=self.serialize)
-        return self.redis.lpush(queue, *values)
+        values = [self.serialize(v) for v in values if (v is not None)]
+        if values:
+            return self.redis.lpush(queue, *values)
 
     def jobs(self):
         """ Iterator that produces jobs to run in this worker.

@@ -26,8 +26,8 @@ class ShodanWorker(RedisWorker):
         print len(res)
         return res
 
-    def insert_query(self, query):
-        self.write('search:shodan', [query, 1])
+    def insert_query(self, query, page=1):
+        self.write('search:shodan', [query, page])
 
     def count(self, query):
         return self.api.count(query)

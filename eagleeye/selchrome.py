@@ -113,7 +113,6 @@ class SeleniumWorker(RedisWorker):
 
             # try going to a blank page so we get an error now if we can't
             driver.get('about:blank')
-        # No timelimiting currently :(
         except socket.timeout:
              logger.info('Terminating overtime connection: %s', target_url)
              self.terminate_driver()
