@@ -125,7 +125,7 @@ class SeleniumWorker(RedisWorker):
             print 'MAJOR PROBLEM: ', target_url
             self.terminate_driver()
         if screenshot:
-            return [screenshot, target_url]
+            yield [screenshot, target_url]
 
     def __del__(self):
         socket.setdefaulttimeout(self.original_socket_timeout)
@@ -146,7 +146,7 @@ class WriteScreenshot(RedisWorker):
         screenshot, url = job
         binary_screenshot = base64.b64decode(screenshot)
         file_name = url.replace('://', '_').replace(':', '_')
-        f = open(os.path.join(os.getcwd(), 'out/%s.png' % file_name), 'w')
-        f.write(binary_screenshot)
-        f.close()
-        return url
+        file_path = os.path.join(os.getcwd(), 'out/%s.png' % file_name)
+        with open(file_path, 'w') as f:
+            f.write(binary_screenshot)
+        yield url

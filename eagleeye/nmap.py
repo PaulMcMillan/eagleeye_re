@@ -8,17 +8,22 @@ from eagleeye import RedisWorker
 
 class NmapWorker(RedisWorker):
     qoutput = 'image:http'
+    key_set = set()
 
     def add_job(self, hosts, port_set):
-        queue = self.queue('verify:port:%s' % port_set)
-        self.redis.sadd('verify:port:set', port_set)
+        # This feels like it should be a classmethod, but it needs
+        # redis. Hmmmm... oh well.
+        queue_name = self.queue('verify:port:%s' % port_set)
+        if queue_name not in self.key_set:
+            self.redis.sadd('verify:port:set', queue_name)
+            self.key_set.add(queue_name)
         for host in hosts:
             queue.send(host)
 
     def jobs(self):
         while True:
-            key_set = self.redis.smembers('verify:port:set')
-            for key in key_set:
+            self.key_set = self.redis.smembers('verify:port:set')
+            for key in self.key_set:
                 yield key
             else:
                 # don't busy loop while we wait for initial set members
@@ -26,7 +31,6 @@ class NmapWorker(RedisWorker):
 
     def run(self, ports):
         hosts = self.finite_queue(job)[:1000]
-
         for host in basic_nmap(hosts, ports):
             # XXX better output queue selection
             yield host
