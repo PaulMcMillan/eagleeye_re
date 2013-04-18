@@ -2,12 +2,14 @@ import json
 
 import redis
 
-from eagleeye.utils import iterit
+from eagleeye.utils import iterit, start_gen
 
 # RPOP, LPUSH
+# NO!
+# LPOP RPush
 
 class BaseWorker(object):
-    # workers are by default persistent and blocking
+    # workers are by default persistent
     def jobs(self):
         """ Jobs generator must be implemented by subclass. """
         raise NotImplementedError
@@ -21,9 +23,18 @@ class BaseWorker(object):
         raise NotImplementedError
 
     def __call__(self, *args, **kwargs):
+        """ Iterate through available jobs, handling each one.  Note
+        that this construction leaves the blocking/non-blocking
+        decision up to the job itself:
+         - if the job is finite, this handles each item once
+         - if the job is infinite, this yields None when the job is not true
+        This works because None is never a valid job.
+        """
         for job in self.jobs(*args, **kwargs):
-            yield self.handle(job)
-
+            if job:
+                yield self.handle(job)
+            else:
+                yield None
 
 class RedisWorker(BaseWorker):
     qinput = None
@@ -45,42 +56,54 @@ class RedisWorker(BaseWorker):
         """ A default data deserializer """
         return json.loads(value)
 
-    def read(self, queue=None, timeout=0, blocking=True):
+    @start_gen
+    def queue(self, queue):
+        value = True
+        result = yield
+        while value or result:
+            while result:
+                result = yield self.redis.write(queue, result)
+            value = self.redis.lpop(queue)
+            result = yield value
+
+    @start_gen
+    def blqueue(self, queue):
+        result = yield
+        while True:
+            while result:
+                result = yield self.redis.write(queue, result)
+            result = yield self.redis.blpop(queue)
+
+
+    def read(self, queue=None):
         if not queue:
             queue = self.qinput
-        if blocking:
-            res = self.redis.brpop(queue, timeout)
-            if res:  # returns a (queue, val)
-                res = res[1]
-        else:
-            res = self.redis.rpop(queue)
+        res = self.redis.lpop(queue)
+        # XXX Fix this behavior of None
         if res:
             return self.deserialize(res)
 
     def write(self, queue, *values):
-        values = [self.serialize(v) for v in values if (v is not None)]
-        if values:
-            return self.redis.lpush(queue, *values)
+        values = (self.serialize(v) for v in values)
+        return self.redis.rpush(queue, *values)
 
     def jobs(self):
         """ Iterator that produces jobs to run in this worker.
 
-        By default, this will read forever, blocking when there's no
-        task. Don't subclass this and put something heavy here,
-        instead make a new worker for that task.
+        This returns None (a non-job) when there is nothing in the queue.
         """
         while True:
-            result = self.read(blocking=self.blocking)
-            if result is None:  # our (non-blocking) read found no result
-                return  # so finish this generator
-            yield result
+            yield self.read()
 
     def handle(self, job):
         result = self.run(job)
-        if self.qoutput:
-            self.write(self.qoutput, result)
-        return result
+        if result:
+            self.write(self.qoutput, *result)
 
     def run(self, job):
-        """ The actual work of the class """
+        """ The actual work of the class.
+
+        To take advantage of the result queuing, yield values rather
+        than returning them.
+        """
         raise NotImplementedError

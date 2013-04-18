@@ -1,3 +1,5 @@
+from functools import wraps
+
 def iterit(*args, **kwargs):
     """
     This takes some input (int, string, list, iterable, whatever) and
@@ -31,3 +33,11 @@ def iterit(*args, **kwargs):
         return [iterit(arg, **kwargs) for arg in args]
     return map(kwargs.get('cast', None),
                args[0] if hasattr(args[0], '__iter__') else [args[0], ])
+
+def start_queue(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        gen = f(*args, **kwargs)
+        gen.next()
+        return gen
+    return wrapper

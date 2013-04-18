@@ -28,7 +28,8 @@ Search queues are high-level abstrations of search tasks
 Verify queues take a string of the form "address:port". The
 protcol-specific queues will eventually perform some validation.
 
- * verify - verifies that a port is open at all with nmap
+ * verify:port:# - verifies that a port is open at all with nmap
+ * verify:port:set - set of all verify:port:# keys
  * verify:http
  * verify:https
  * verify:vnc
@@ -40,7 +41,6 @@ The image queues have protocol-specific workers which take snapshots
 
 The result processing queue is generally the last step.
  * result:save_image
-
 
 
 Security

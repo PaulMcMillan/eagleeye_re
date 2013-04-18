@@ -8,8 +8,6 @@ from eagleeye import RedisWorker
 class ShodanWorker(RedisWorker):
     qinput = 'search:shodan'
     qoutput = 'verify'
-    # This queuing system will work, but we eventually need something
-    # more complex that passes or recognizes intended protocols
 
     def __init__(self, shodan_api_key=None, *args, **kwargs):
         super(ShodanWorker, self).__init__(*args, **kwargs)
@@ -23,10 +21,10 @@ class ShodanWorker(RedisWorker):
     def run(self, job):
         query, page = job
         res = self.api.search(query, page=page)['matches']
-        print len(res)
-        return res
+        for host in res:
+            yield host
 
-    def insert_query(self, query, page=1):
+    def query(self, query, page=1):
         self.write('search:shodan', [query, page])
 
     def count(self, query):

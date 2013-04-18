@@ -1,19 +1,26 @@
 import subprocess
 
+from itertools import cycle
+
 from lxml import objectify
 
 from eagleeye import RedisWorker
 
 class NmapWorker(RedisWorker):
-    qinput = 'verify'
+    def set_read(self, value):
+        return self.redis.smembers(value)
+
+    def jobs(self):
+        while True:
+            key_set = self.set_read('verify:port:set')
+            for key in key_set:
+                yield key
 
     def run(self, job):
-        print job
         result = []
         for host in filter_open(job):
             self.write('image:http', host)
             result.append(host)
-        return result
 
 
 def filter_open(hosts):
@@ -31,6 +38,7 @@ def filter_open(hosts):
 
     command = ['nmap', '-T5', '--no-stylesheet', '-Pn', '-sT',
                '--min-rate', '500', '--host-timeout', '15s',
+               '-n', # No DNS resolution
                '-oX', '-',  # output XML to stdout
                '-p', ','.join(port_list)] + host_list
     nmap_xml_output = subprocess.check_output(command)
