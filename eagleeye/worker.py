@@ -39,11 +39,8 @@ class BaseWorker(object):
 class RedisWorker(BaseWorker):
     qinput = None
     qoutput = None
-    blocking = True
 
-    def __init__(self, blocking=None, *args, **kwargs):
-        if blocking is not None:
-            self.blocking = blocking
+    def __init__(self, *args, **kwargs):
         # This should become a shared pool once we have worker management
         self.redis = redis.StrictRedis(host='localhost', port=6379, db=0)
         return super(RedisWorker, self).__init__(*args, **kwargs)
@@ -53,39 +50,21 @@ class RedisWorker(BaseWorker):
         return json.dumps(value)
 
     def deserialize(self, value):
-        """ A default data deserializer """
-        return json.loads(value)
+        """ A default data deserializer.
+
+        Doesn't attempt to deserialize None.
+        """
+        if value:
+            return json.loads(value)
 
     @start_gen
     def queue(self, queue):
-        value = True
-        result = yield
-        while value or result:
-            while result:
-                result = yield self.redis.write(queue, result)
-            value = self.redis.lpop(queue)
-            result = yield value
-
-    @start_gen
-    def blqueue(self, queue):
         result = yield
         while True:
             while result:
+                result = (self.serialize(v) for v in result)
                 result = yield self.redis.write(queue, result)
-            result = yield self.redis.blpop(queue)
-
-
-    def read(self, queue=None):
-        if not queue:
-            queue = self.qinput
-        res = self.redis.lpop(queue)
-        # XXX Fix this behavior of None
-        if res:
-            return self.deserialize(res)
-
-    def write(self, queue, *values):
-        values = (self.serialize(v) for v in values)
-        return self.redis.rpush(queue, *values)
+            result = yield self.deserialize(self.redis.lpop(queue))
 
     def jobs(self):
         """ Iterator that produces jobs to run in this worker.
