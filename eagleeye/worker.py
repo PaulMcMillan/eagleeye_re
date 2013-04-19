@@ -6,8 +6,6 @@ import redis
 from eagleeye.utils import iterit
 from eagleeye.utils import start_gen
 
-# RPOP, LPUSH
-# NO!
 # LPOP RPush
 
 class BaseWorker(object):
@@ -33,10 +31,10 @@ class BaseWorker(object):
         This works because None is never a valid job.
         """
         for job in self.jobs(*args, **kwargs):
-            if job:
-                yield self.handle(job)
-            else:
-                yield None
+            if job is not None:
+                res = self.handle(job)
+            yield job, res
+
 
 class RedisWorker(BaseWorker):
     qinput = None
@@ -73,7 +71,7 @@ class RedisWorker(BaseWorker):
         result = yield
         while True:
             while result:
-                result = (self.serialize(v) for v in result)
+                result = iterit(result, cast=self.serialize)
                 result = yield self.redis.rpush(queue_name, *result)
             result = yield self.deserialize(self.redis.lpop(queue_name))
 
@@ -88,12 +86,13 @@ class RedisWorker(BaseWorker):
 
         This returns None (a non-job) when there is nothing in the queue.
         """
-        return queue(self.qinput)
+        return self.qinput
 
     def handle(self, job):
         result = self.run(job)
         if result:
             self.qoutput.send(result)
+        return result
 
     def run(self, job):
         """ The actual work of the class.

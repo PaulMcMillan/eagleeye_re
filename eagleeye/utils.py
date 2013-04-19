@@ -34,7 +34,7 @@ def iterit(*args, **kwargs):
     return map(kwargs.get('cast', None),
                args[0] if hasattr(args[0], '__iter__') else [args[0], ])
 
-def start_queue(f):
+def start_gen(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         gen = f(*args, **kwargs)
