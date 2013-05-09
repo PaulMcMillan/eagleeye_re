@@ -31,9 +31,10 @@ class BaseWorker(object):
         This works because None is never a valid job.
         """
         for job in self.jobs(*args, **kwargs):
+            # XXX not happy with this yet, but it's a start
             if job is not None:
                 res = self.handle(job)
-            yield job, res
+            yield job
 
 
 class RedisWorker(BaseWorker):
