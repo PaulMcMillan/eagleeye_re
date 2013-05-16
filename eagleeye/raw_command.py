@@ -11,8 +11,9 @@ class CommandWorker(RedisWorker):
 
     def run(self, job):
         outfile, command = job
+        command = map(str, command)
         print "Running command: %s" % ' '.join(command)
-        proc = subprocess.Popen(map(str, command), stdout=subprocess.PIPE)
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE)
         stdout, stderr = proc.communicate()
         yield [outfile, stdout]
 
