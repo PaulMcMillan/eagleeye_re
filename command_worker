@@ -5,4 +5,5 @@ from eagleeye.raw_command import CommandWorker
 worker = CommandWorker()
 
 for result in worker():
-    print result
+    if result:
+        print result
