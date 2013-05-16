@@ -6,8 +6,6 @@ import redis
 from eagleeye.utils import iterit
 from eagleeye.utils import start_gen
 
-# LPOP RPush
-
 class BaseWorker(object):
     # workers are by default persistent
     def jobs(self):
@@ -44,21 +42,7 @@ class RedisWorker(BaseWorker):
     def __init__(self, qinput=None, qoutput=None, *args, **kwargs):
         self.qinput = self.queue(qinput or self.qinput)
         self.qoutput = self.queue(qoutput or self.qoutput)
-        # This should become a shared pool once we have worker management
-        self.redis = redis.StrictRedis(host='localhost', port=6379, db=0)
-        return super(RedisWorker, self).__init__(*args, **kwargs)
 
-    def serialize(self, value):
-        """ A default data serializer """
-        return json.dumps(value)
-
-    def deserialize(self, value):
-        """ A default data deserializer.
-
-        Doesn't attempt to deserialize None.
-        """
-        if value:
-            return json.loads(value)
 
     @start_gen
     def queue(self, queue_name):
@@ -72,8 +56,8 @@ class RedisWorker(BaseWorker):
         result = yield
         while True:
             while result:
-                result = iterit(result, cast=self.serialize)
-                result = yield self.redis.rpush(queue_name, *result)
+                result = [self.serialize(r) for r in result]
+                result = yield self.redis.rpush(queue_name, result)
             result = yield self.deserialize(self.redis.lpop(queue_name))
 
     def finite_queue(self, queue_name):

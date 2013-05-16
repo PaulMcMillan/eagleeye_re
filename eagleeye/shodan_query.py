@@ -19,13 +19,14 @@ class ShodanWorker(RedisWorker):
         self.nmap_worker = NmapWorker()
 
     def run(self, job):
+        print 'JOB!', job
         query, page = job
         res = self.api.search(query, page=page)['matches']
         for host in res:
             self.nmap_worker.add_job(host['ip'], host['port'])
 
     def query(self, query, page=1):
-        self.qinput.send('search:shodan', [query, page])
+        self.qinput.send([[query, page]])
 
     def count(self, query):
         return self.api.count(query)

@@ -1,22 +1,24 @@
+import itertools
+
 from eagleeye.shodan_query import ShodanWorker
 from eagleeye.nmap import NmapWorker
 from eagleeye.selchrome import SeleniumWorker, WriteScreenshot
 
 #query = raw_input('Shodan Query: ')
 query = 'org:amazon port:80'
-worker = ShodanWorker(blocking=False)
+worker = ShodanWorker()
 print worker.count(query)
-worker.insert_query(query)
+worker.query(query)
 
 print "shodan worker:"
-for result in worker():
-    pass
+for result in itertools.takewhile(bool, worker()):
+    print result
 
 print "nmap worker:"
-worker = NmapWorker(blocking=False)
+worker = NmapWorker()
 
-for result in worker():
-    print result
+for result in itertools.takewhile(bool, worker()):
+    print 'nmap result: ', result
 
 print "selenium worker:"
 worker = SeleniumWorker(blocking=False)

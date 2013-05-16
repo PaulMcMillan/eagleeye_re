@@ -5,7 +5,7 @@ from itertools import cycle
 from lxml import objectify
 
 from eagleeye import RedisWorker
-
+from eagleeye.utils import iterit
 class NmapWorker(RedisWorker):
     qoutput = 'image:http'
     key_set = set()
@@ -14,11 +14,11 @@ class NmapWorker(RedisWorker):
         # This feels like it should be a classmethod, but it needs
         # redis. Hmmmm... oh well.
         queue_name = self.queue('verify:port:%s' % port_set)
+        queue = self.queue(queue_name)
         if queue_name not in self.key_set:
             self.redis.sadd('verify:port:set', queue_name)
             self.key_set.add(queue_name)
-        for host in hosts:
-            queue.send(host)
+        queue.send(iterit(hosts))
 
     def jobs(self):
         while True:
@@ -30,7 +30,9 @@ class NmapWorker(RedisWorker):
                 yield
 
     def run(self, ports):
+        # split this up into finite chunks as jobs
         hosts = self.finite_queue(job)[:1000]
+        print hosts
         for host in basic_nmap(hosts, ports):
             # XXX better output queue selection
             yield host
