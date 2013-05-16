@@ -10,8 +10,9 @@ class CommandWorker(RedisWorker):
 
     def run(self, job):
         outfile, command = job
-        result = subprocess.check_output(command)
-        yield [outfile, result]
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        yield [outfile, stdout]
 
 class CommandResultWorker(RedisWorker):
     qinput = Queue('result:raw')

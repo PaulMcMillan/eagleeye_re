@@ -27,10 +27,10 @@ class Queue(object):
 
     def next(self):
         res = self.redis.lpop(self.queue_name)
-        if res or not self.is_finite:
-            return self.deserialize(res)
-        else:
+        if not res and self.is_finite:
             raise StopIteration
+        return self.deserialize(res)
+
 
     def send(self, value):
         return self.redis.rpush(self.queue_name, self.serialize(value))
