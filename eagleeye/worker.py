@@ -31,7 +31,9 @@ class BaseWorker(object):
             # XXX not super happy with this yet, but it's a start
             if job is not None:
                 res = self.handle(job)
-            yield job, res
+                yield job, res
+            else:
+                yield job
 
 
 class RedisWorker(BaseWorker):

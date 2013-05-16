@@ -10,8 +10,9 @@ class CommandWorker(RedisWorker):
 
     def run(self, job):
         outfile, command = job
-        proc = subprocess.Popen(command, stdout=subprocess.PIPE)
-        stdout, stderr = proc.communicate()
+#        proc = subprocess.Popen(command, stdout=subprocess.PIPE)
+#        stdout, stderr = proc.communicate()
+        stdout = str(command)
         yield [outfile, stdout]
 
 class CommandResultWorker(RedisWorker):
@@ -23,3 +24,4 @@ class CommandResultWorker(RedisWorker):
             timestamp=time.time())
         with open(output_filename, 'w') as f:
             f.write(result)
+

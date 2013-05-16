@@ -1,0 +1,8 @@
+#!/usr/bin/python
+
+from eagleeye.raw_command import CommandResultWorker
+
+worker = CommandResultWorker()
+
+for result in worker():
+    print result
