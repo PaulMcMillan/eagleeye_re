@@ -13,9 +13,9 @@ worker = CommandWorker()
 
 for sub in ip.subnet(SUBNET_PREFIXLEN):
     cmd = ['nmap',  '-T4',  '--open',  '-sV',  '-sT',  '-sC',
-           '-A', '-O', '-n', '-Pn',  '--min-parallelism 50',
+           '-A', '-O', '-n', '-Pn',  '--min-parallelism', '50',
            '--min-rate',  '100',  '-g',  '53',
-           '--min-host-group', sub.prefixlen,
+           '--min-host-group', str(sub.prefixlen),
            '-oX', '-',
            str(sub)
            ]
