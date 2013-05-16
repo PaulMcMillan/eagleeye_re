@@ -2,11 +2,13 @@ import os
 
 from shodan import WebAPI
 
+from eagleeye import Queue
+
 from eagleeye import RedisWorker
 from eagleeye import NmapWorker
 
 class ShodanWorker(RedisWorker):
-    qinput = 'search:shodan'
+    qinput = Queue('search:shodan')
 
     def __init__(self, shodan_api_key=None, *args, **kwargs):
         super(ShodanWorker, self).__init__(*args, **kwargs)
@@ -26,7 +28,7 @@ class ShodanWorker(RedisWorker):
             self.nmap_worker.add_job(host['ip'], host['port'])
 
     def query(self, query, page=1):
-        self.qinput.send([[query, page]])
+        self.qinput.send([query, page])
 
     def count(self, query):
         return self.api.count(query)

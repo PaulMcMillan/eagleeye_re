@@ -4,6 +4,11 @@ from eagleeye.shodan_query import ShodanWorker
 from eagleeye.nmap import NmapWorker
 from eagleeye.selchrome import SeleniumWorker, WriteScreenshot
 
+# fixme zomg the hax
+import redis
+r = redis.StrictRedis()
+r.flushdb()
+
 #query = raw_input('Shodan Query: ')
 query = 'org:amazon port:80'
 worker = ShodanWorker()

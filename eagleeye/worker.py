@@ -1,10 +1,9 @@
 import itertools
 import json
 
-import redis
-
 from eagleeye.utils import iterit
 from eagleeye.utils import start_gen
+from eagleeye.queue import Queue
 
 class BaseWorker(object):
     # workers are by default persistent
@@ -29,42 +28,15 @@ class BaseWorker(object):
         This works because None is never a valid job.
         """
         for job in self.jobs(*args, **kwargs):
-            # XXX not happy with this yet, but it's a start
+            # XXX not super happy with this yet, but it's a start
             if job is not None:
                 res = self.handle(job)
-            yield job
+            yield job, res
 
 
 class RedisWorker(BaseWorker):
     qinput = None
     qoutput = None
-
-    def __init__(self, qinput=None, qoutput=None, *args, **kwargs):
-        self.qinput = self.queue(qinput or self.qinput)
-        self.qoutput = self.queue(qoutput or self.qoutput)
-
-
-    @start_gen
-    def queue(self, queue_name):
-        """ Create a queue object. Treat this like any other iterator,
-        except that it also supports the send(value) method in
-        addition to the standard next().
-
-        Note that queues continue to return None objects when they're
-        empty, so you can iterate forever over them.
-        """
-        result = yield
-        while True:
-            while result:
-                result = [self.serialize(r) for r in result]
-                result = yield self.redis.rpush(queue_name, result)
-            result = yield self.deserialize(self.redis.lpop(queue_name))
-
-    def finite_queue(self, queue_name):
-        """ Use this for a queue that stops when there are no more
-        items rather than returning None forever.
-        """
-        return itertools.takewhile(bool, self.queue(queue_name))
 
     def jobs(self):
         """ Iterator that produces jobs to run in this worker.
@@ -76,7 +48,8 @@ class RedisWorker(BaseWorker):
     def handle(self, job):
         result = self.run(job)
         if result:
-            self.qoutput.send(result)
+            for r in result:
+                self.qoutput.send(r)
         return result
 
     def run(self, job):

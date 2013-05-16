@@ -1,13 +1,16 @@
+import json
+
 import redis
 
 # LPOP RPush
 
+from eagleeye import get_redis
 
 class Queue(object):
     def __init__(self, queue_name, *args, **kwargs):
         # This should become a shared pool once we have worker management
         self.queue_name = queue_name
-        self.redis = redis.StrictRedis(host='localhost', port=6379, db=0)
+        self.redis = get_redis()
         self.is_finite = False
         return super(Queue, self).__init__(*args, **kwargs)
 
@@ -18,16 +21,19 @@ class Queue(object):
         self.is_finite = True
         return self
 
+    def infinite(self):
+        self.is_finite = False
+        return self
+
     def next(self):
         res = self.redis.lpop(self.queue_name)
         if res or not self.is_finite:
-            return res
+            return self.deserialize(res)
         else:
-            self.is_finite = False
             raise StopIteration
 
     def send(self, value):
-        return self.redis.rpush(self.queue_name, value)
+        return self.redis.rpush(self.queue_name, self.serialize(value))
 
     def serialize(self, value):
         """ A default data serializer """
