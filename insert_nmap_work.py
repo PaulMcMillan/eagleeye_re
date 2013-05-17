@@ -19,5 +19,5 @@ for sub in ip.subnet(SUBNET_PREFIXLEN):
            '-oX', '-',
            str(sub)
            ]
-    worker.qinput.send(['out/%s_%s_{timestamp}' % (sub.ip, sub.prefixlen),
+    worker.qinput.send(['out/%s_%s_{timestamp}.xml' % (sub.ip, sub.prefixlen),
                         cmd])
